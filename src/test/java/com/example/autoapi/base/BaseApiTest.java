@@ -89,8 +89,9 @@ public abstract class BaseApiTest extends BaseTest {
             test.log(Status.INFO, "请求头: " + headersRaw);
 
             // 执行请求
-            response = ApiExecutor.execute(method, fullUrl, body, headersRaw);
+            response = ApiClient.execute(method, fullUrl, body, resolvedHeaders);
             test.log(Status.INFO, "响应体: " + response);
+            System.out.println("响应体: " + response);
 
             // 验证响应
             ResponseValidator.validateStatusCode(200, expectedStatus);

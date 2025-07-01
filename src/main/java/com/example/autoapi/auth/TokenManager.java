@@ -7,7 +7,6 @@ import com.example.autoapi.utils.ResponseDataStore;
 import com.example.autoapi.validator.ResponseValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 public class TokenManager {
 
     private static final Logger logger = LoggerFactory.getLogger(TokenManager.class);
@@ -27,13 +26,12 @@ public class TokenManager {
             String resolvedUrl = ParamResolver.resolve(url);
             String resolvedBody = ParamResolver.resolve(body);
 
-            String response = ApiClient.post(resolvedUrl, resolvedBody, false);
+            String response = ApiClient.execute("POST", resolvedUrl, resolvedBody, "");
 
             ResponseValidator.validateJsonField(response, "data.AccessToken", "not_null");
             ResponseValidator.extractJsonField(response, "data.AccessToken", "login_token");
 
             logger.info("🔄 token refreshed: {}", ResponseDataStore.get("login_token"));
-
         } catch (Exception e) {
             logger.error("❌ Token刷新失败: {}", e.getMessage(), e);
             throw new RuntimeException("Token刷新失败", e);
@@ -55,16 +53,17 @@ public class TokenManager {
             String resolvedUrl = ParamResolver.resolve(url);
             String resolvedBody = ParamResolver.resolve(body);
 
-            String response = ApiClient.post(resolvedUrl, resolvedBody, false);
+            String response = ApiClient.execute("POST", resolvedUrl, resolvedBody, "Content-Type=application/json");
             System.out.println(response);
 
             ResponseValidator.validateJsonField(response, "data.AccessToken", "not_null");
             ResponseValidator.extractJsonField(response, "data.AccessToken", "login_token");
-            logger.info("✅ 登录成功，token: {}", ResponseDataStore.get("login_token"));
 
+            logger.info("✅ 登录成功，token: {}", ResponseDataStore.get("login_token"));
         } catch (Exception e) {
             logger.error("🚨 登录失败: {}", e.getMessage());
             throw new RuntimeException("登录失败，无法获取 token", e);
         }
     }
 }
+
