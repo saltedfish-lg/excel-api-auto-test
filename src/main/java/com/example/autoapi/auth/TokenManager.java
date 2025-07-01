@@ -1,12 +1,14 @@
 package com.example.autoapi.auth;
 
 import com.example.autoapi.base.ApiClient;
+import com.example.autoapi.base.ApiResponse;
 import com.example.autoapi.config.EnvConfig;
 import com.example.autoapi.utils.ParamResolver;
 import com.example.autoapi.utils.ResponseDataStore;
 import com.example.autoapi.validator.ResponseValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 public class TokenManager {
 
     private static final Logger logger = LoggerFactory.getLogger(TokenManager.class);
@@ -26,14 +28,20 @@ public class TokenManager {
             String resolvedUrl = ParamResolver.resolve(url);
             String resolvedBody = ParamResolver.resolve(body);
 
-            String response = ApiClient.execute("POST", resolvedUrl, resolvedBody, "");
+            ApiResponse response = ApiClient.sendRequest("POST", resolvedUrl, resolvedBody, ApiClient.jsonHeader());
 
-            ResponseValidator.validateJsonField(response, "data.AccessToken", "not_null");
-            ResponseValidator.extractJsonField(response, "data.AccessToken", "login_token");
+            if (response.getStatusCode() != 200) {
+                logger.error("❌ Token刷新失败: 状态码 = {}, 响应体 = {}", response.getStatusCode(), response.getBody());
+                throw new RuntimeException("Token刷新失败，状态码非 200");
+            }
+
+            ResponseValidator.validateJsonField(response.getBody(), "data.AccessToken", "not_null");
+            ResponseValidator.extractJsonField(response.getBody(), "data.AccessToken", "login_token");
 
             logger.info("🔄 token refreshed: {}", ResponseDataStore.get("login_token"));
+
         } catch (Exception e) {
-            logger.error("❌ Token刷新失败: {}", e.getMessage(), e);
+            logger.error("❌ Token刷新异常: {}", e.getMessage(), e);
             throw new RuntimeException("Token刷新失败", e);
         }
     }
@@ -53,17 +61,21 @@ public class TokenManager {
             String resolvedUrl = ParamResolver.resolve(url);
             String resolvedBody = ParamResolver.resolve(body);
 
-            String response = ApiClient.execute("POST", resolvedUrl, resolvedBody, "Content-Type=application/json");
-            System.out.println(response);
+            ApiResponse response = ApiClient.sendRequest("POST", resolvedUrl, resolvedBody, ApiClient.jsonHeader());
 
-            ResponseValidator.validateJsonField(response, "data.AccessToken", "not_null");
-            ResponseValidator.extractJsonField(response, "data.AccessToken", "login_token");
+            if (response.getStatusCode() != 200) {
+                logger.error("🚫 登录失败，状态码 = {}, 响应体 = {}", response.getStatusCode(), response.getBody());
+                throw new RuntimeException("登录失败：Token未获取");
+            }
+
+            ResponseValidator.validateJsonField(response.getBody(), "data.AccessToken", "not_null");
+            ResponseValidator.extractJsonField(response.getBody(), "data.AccessToken", "login_token");
 
             logger.info("✅ 登录成功，token: {}", ResponseDataStore.get("login_token"));
+
         } catch (Exception e) {
-            logger.error("🚨 登录失败: {}", e.getMessage());
+            logger.error("🚨 登录异常: {}", e.getMessage(), e);
             throw new RuntimeException("登录失败，无法获取 token", e);
         }
     }
 }
-

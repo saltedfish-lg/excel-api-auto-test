@@ -60,7 +60,6 @@ public abstract class BaseApiTest extends BaseTest {
             String resolvedHeaders = ParamResolver.resolveWithStore(headersRaw);
             test.log(Status.INFO, "最终请求头（已解析）: " + resolvedHeaders);
 
-//            String url = ParamResolver.resolveWithStore(rawUrl);
             String baseUrl = EnvConfig.get("base.url"); // 👈 读取配置
             String resolvedPath = ParamResolver.resolveWithStore(rawUrl);
 
@@ -132,11 +131,26 @@ public abstract class BaseApiTest extends BaseTest {
      * 测试失败时写入错误与通知
      */
     protected void markFail(String response, int rowIndex, String msg, Throwable e) {
-        test.fail("❌ 断言失败: " + msg);
-        NotificationService.notifyAllChannels(msg);
-        if (rowIndex > 0) {
-            ExcelWriter.writeResult(filePath, sheetName, rowIndex, response, "FAIL");
+        String statusPrefix = "";
+
+        // 尝试从响应中解析状态码
+        if (response != null) {
+            if (response.contains("\"code\":404")) statusPrefix = "FAIL-404: ";
+            else if (response.contains("\"code\":401")) statusPrefix = "FAIL-401: ";
+            else if (response.contains("\"code\":500")) statusPrefix = "FAIL-500: ";
+            else if (response.contains("\"code\":400")) statusPrefix = "FAIL-400: ";
+            else statusPrefix = "FAIL: ";
         }
-        throw new RuntimeException(msg, e);
+
+        String fullMessage = statusPrefix + msg;
+
+        test.fail("❌ 断言失败: " + fullMessage);
+        NotificationService.notifyAllChannels(fullMessage);
+
+        if (rowIndex > 0) {
+            ExcelWriter.writeResult(filePath, sheetName, rowIndex, response, fullMessage);
+        }
+
+        throw new RuntimeException(fullMessage, e);
     }
 }

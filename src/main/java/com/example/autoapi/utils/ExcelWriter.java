@@ -24,43 +24,47 @@ public class ExcelWriter {
      * @param status    测试状态（PASS / FAIL）
      */
     public static void writeResult(String filePath, String sheetName, int rowIndex, String response, String status) {
-        lock.lock(); // 锁定资源，确保线程安全
-        try (FileInputStream fis = new FileInputStream(filePath);
-             Workbook workbook = new XSSFWorkbook(fis)) {
+        lock.lock(); // 确保线程安全
+        Workbook workbook = null;
 
+        try (FileInputStream fis = new FileInputStream(filePath)) {
+            workbook = new XSSFWorkbook(fis);
             Sheet sheet = workbook.getSheet(sheetName);
             if (sheet == null) throw new RuntimeException("❌ Sheet 不存在: " + sheetName);
 
-            // POI 是从 0 开始的行号，rowIndex 是 Excel 中的（从 1 开始）
-            Row row = sheet.getRow(rowIndex - 1);
+            Row row = sheet.getRow(rowIndex - 1); // Excel 从 1 开始，POI 从 0 开始
             if (row == null) row = sheet.createRow(rowIndex - 1);
 
+            // 获取“response”和“status”列索引
             int responseCol = findOrCreateColumnIndex(sheet, "response");
             int statusCol = findOrCreateColumnIndex(sheet, "status");
 
-            Cell responseCell = row.getCell(responseCol);
-            if (responseCell == null) responseCell = row.createCell(responseCol);
-            responseCell.setCellValue(response);
-
-            Cell statusCell = row.getCell(statusCol);
-            if (statusCell == null) statusCell = row.createCell(statusCol);
-            statusCell.setCellValue(status);
-
-            // 关闭输入流，防止 Windows 下无法写入
-            fis.close();
-
-            // 写回文件
-            try (FileOutputStream fos = new FileOutputStream(filePath)) {
-                workbook.write(fos);
-                fos.flush();
-            }
+            // 写入响应内容
+            writeCell(row, responseCol, response);
+            writeCell(row, statusCol, status);
 
         } catch (Exception e) {
             throw new RuntimeException("❌ 写入 Excel 失败: " + e.getMessage(), e);
         } finally {
-            lock.unlock();
+            // 始终尝试写入，前提是 workbook 不为 null（且不抛出写入异常就关闭文件）
+            if (workbook != null) {
+                try (FileOutputStream fos = new FileOutputStream(filePath)) {
+                    workbook.write(fos);
+                    fos.flush();
+                } catch (IOException ioException) {
+                    throw new RuntimeException("❌ Excel 写入时出错: " + ioException.getMessage(), ioException);
+                }
+            }
+            lock.unlock(); // 释放锁
         }
     }
+
+    private static void writeCell(Row row, int colIndex, String value) {
+        Cell cell = row.getCell(colIndex);
+        if (cell == null) cell = row.createCell(colIndex);
+        cell.setCellValue(value != null ? value : "");
+    }
+
 
     /**
      * 查找列名对应的列号，如果不存在则创建新列

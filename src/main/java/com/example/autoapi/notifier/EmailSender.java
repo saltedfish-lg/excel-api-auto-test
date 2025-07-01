@@ -1,6 +1,6 @@
 package com.example.autoapi.notifier;
 
-import com.example.autoapi.config.FrameworkConfig;
+import com.example.autoapi.config.EnvConfig;
 import jakarta.activation.DataHandler;
 import jakarta.activation.DataSource;
 import jakarta.activation.FileDataSource;
@@ -20,14 +20,14 @@ public class EmailSender {
     private static final Logger logger = LoggerFactory.getLogger(EmailSender.class);
 
     public static void sendReport(String reportPath) {
-        if (!"true".equalsIgnoreCase(FrameworkConfig.get("mail.enabled"))) return;
+        if (!"true".equalsIgnoreCase(EnvConfig.get("mail.enabled"))) return;
 
-        String host = FrameworkConfig.get("mail.host");
-        String port = FrameworkConfig.get("mail.port");
-        String username = FrameworkConfig.get("mail.username");
-        String password = FrameworkConfig.get("mail.password");
-        String to = FrameworkConfig.get("mail.to");
-        String subject = FrameworkConfig.get("mail.subject");
+        String host = EnvConfig.get("mail.host");
+        String port = EnvConfig.get("mail.port");
+        String username = EnvConfig.get("mail.username");
+        String password = EnvConfig.get("mail.password");
+        String to = EnvConfig.get("mail.to");
+        String subject = EnvConfig.get("mail.subject");
 
         Properties props = new Properties();
         props.put("mail.smtp.auth", "true");
