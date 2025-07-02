@@ -50,7 +50,7 @@ public class ApiClient {
         return response.getBody();
     }
 
-    private static ApiResponse sendRequest(String method, String url, String body, Map<String, String> headers) {
+    public static ApiResponse sendRequest(String method, String url, String body, Map<String, String> headers) {
         ApiResponse result = new ApiResponse();
         long start = System.currentTimeMillis();
 

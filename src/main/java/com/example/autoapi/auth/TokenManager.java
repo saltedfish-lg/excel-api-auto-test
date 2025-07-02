@@ -52,7 +52,7 @@ public class TokenManager {
     public static void loginAndStoreToken() {
         try {
             String baseUrl = EnvConfig.get("base.url");
-            String url = baseUrl + "/meio/Users/PasswordLogin";
+            String url = baseUrl + "/MerchantUsers/PasswordLogin";
 
             String user = EnvConfig.get("login.user");
             String pass = EnvConfig.get("login.pass");
