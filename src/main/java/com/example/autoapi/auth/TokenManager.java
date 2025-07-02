@@ -1,7 +1,6 @@
 package com.example.autoapi.auth;
 
 import com.example.autoapi.base.ApiClient;
-import com.example.autoapi.base.ApiResponse;
 import com.example.autoapi.config.EnvConfig;
 import com.example.autoapi.utils.ParamResolver;
 import com.example.autoapi.utils.ResponseDataStore;
@@ -19,24 +18,27 @@ public class TokenManager {
     public static void refreshToken() {
         try {
             String baseUrl = EnvConfig.get("base.url");
-            String url = baseUrl + "/meio/Users/PasswordLogin";
+            String url = baseUrl + "/MerchantUsers/PasswordLogin"; // Token刷新接口
 
             String user = EnvConfig.get("login.user");
             String pass = EnvConfig.get("login.pass");
             String body = String.format("{\"account\":\"%s\",\"password\":\"%s\"}", user, pass);
 
+            // 解析 URL 和 body
             String resolvedUrl = ParamResolver.resolve(url);
             String resolvedBody = ParamResolver.resolve(body);
 
-            ApiResponse response = ApiClient.sendRequest("POST", resolvedUrl, resolvedBody, ApiClient.jsonHeader());
+            // 使用 ApiClient.execute 发送请求
+            String response = ApiClient.execute("POST", resolvedUrl, resolvedBody, "Content-Type=application/json");
 
-            if (response.getStatusCode() != 200) {
-                logger.error("❌ Token刷新失败: 状态码 = {}, 响应体 = {}", response.getStatusCode(), response.getBody());
-                throw new RuntimeException("Token刷新失败，状态码非 200");
+            if (response == null || response.isEmpty()) {
+                logger.error("❌ Token刷新失败: 响应为空");
+                throw new RuntimeException("Token刷新失败，响应为空");
             }
 
-            ResponseValidator.validateJsonField(response.getBody(), "data.AccessToken", "not_null");
-            ResponseValidator.extractJsonField(response.getBody(), "data.AccessToken", "login_token");
+            // 验证返回的 JSON 是否包含 AccessToken 字段
+            ResponseValidator.validateJsonField(response, "data.AccessToken", "not_null");
+            ResponseValidator.extractJsonField(response, "data.AccessToken", "login_token");
 
             logger.info("🔄 token refreshed: {}", ResponseDataStore.get("login_token"));
 
@@ -52,24 +54,27 @@ public class TokenManager {
     public static void loginAndStoreToken() {
         try {
             String baseUrl = EnvConfig.get("base.url");
-            String url = baseUrl + "/MerchantUsers/PasswordLogin";
+            String url = baseUrl + "/MerchantUsers/PasswordLogin"; // 登录接口
 
             String user = EnvConfig.get("login.user");
             String pass = EnvConfig.get("login.pass");
             String body = String.format("{\"account\":\"%s\",\"password\":\"%s\"}", user, pass);
 
+            // 解析 URL 和 body
             String resolvedUrl = ParamResolver.resolve(url);
             String resolvedBody = ParamResolver.resolve(body);
 
-            ApiResponse response = ApiClient.sendRequest("POST", resolvedUrl, resolvedBody, ApiClient.jsonHeader());
+            // 使用 ApiClient.execute 发送请求
+            String response = ApiClient.execute("POST", resolvedUrl, resolvedBody, "Content-Type=application/json");
 
-            if (response.getStatusCode() != 200) {
-                logger.error("🚫 登录失败，状态码 = {}, 响应体 = {}", response.getStatusCode(), response.getBody());
+            if (response == null || response.isEmpty()) {
+                logger.error("🚫 登录失败，响应为空");
                 throw new RuntimeException("登录失败：Token未获取");
             }
 
-            ResponseValidator.validateJsonField(response.getBody(), "data.AccessToken", "not_null");
-            ResponseValidator.extractJsonField(response.getBody(), "data.AccessToken", "login_token");
+            // 验证返回的 JSON 是否包含 AccessToken 字段
+            ResponseValidator.validateJsonField(response, "data.AccessToken", "not_null");
+            ResponseValidator.extractJsonField(response, "data.AccessToken", "login_token");
 
             logger.info("✅ 登录成功，token: {}", ResponseDataStore.get("login_token"));
 
@@ -79,3 +84,4 @@ public class TokenManager {
         }
     }
 }
+

@@ -8,7 +8,7 @@ public class NotificationService {
         if (!Boolean.parseBoolean(EnvConfig.get("notify.enable"))) {
             return;
         }
-        WeComNotifier.sendText(message);
+        WeComNotifier.sendMarkdown(message);
         DingTalkNotifier.sendText(message);
     }
 }

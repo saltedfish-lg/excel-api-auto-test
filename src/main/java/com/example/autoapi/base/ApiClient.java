@@ -15,7 +15,6 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class ApiClient {
 
@@ -34,23 +33,29 @@ public class ApiClient {
             headers.put("Authorization", token);
         }
 
-        ApiResponse response = sendRequest(method, resolvedUrl, resolvedBody, headers);
+        try {
+            ApiResponse response = sendRequest(method, resolvedUrl, resolvedBody, headers);
 
-        if (response.getStatusCode() == 404) {
-            logger.error("🚫 接口不存在: [{} {}] -> {}", method, resolvedUrl, response.getBody());
-            throw new RuntimeException("接口返回 404：资源不存在，请检查 URL 或服务是否上线");
+            if (response.getStatusCode() == 404) {
+                logger.error("🚫 接口不存在: [{} {}] -> {}", method, resolvedUrl, response.getBody());
+                throw new RuntimeException("接口返回 404：资源不存在，请检查 URL 或服务是否上线");
+            }
+
+            if (isTokenInvalid(response)) {
+                TokenManager.refreshToken();
+                headers.put("Authorization", ResponseDataStore.get("login_token"));
+                response = sendRequest(method, resolvedUrl, ParamResolver.resolveWithStore(body), headers);
+            }
+
+            return response.getBody();
+
+        } catch (Exception e) {
+            logger.error("❌ 请求失败: {}", e.getMessage(), e);
+            throw new RuntimeException("接口请求失败: " + e.getMessage(), e);
         }
-
-        if (isTokenInvalid(response)) {
-            TokenManager.refreshToken();
-            headers.put("Authorization", ResponseDataStore.get("login_token"));
-            response = sendRequest(method, resolvedUrl, ParamResolver.resolveWithStore(body), headers);
-        }
-
-        return response.getBody();
     }
 
-    public static ApiResponse sendRequest(String method, String url, String body, Map<String, String> headers) {
+    private static ApiResponse sendRequest(String method, String url, String body, Map<String, String> headers) {
         ApiResponse result = new ApiResponse();
         long start = System.currentTimeMillis();
 
@@ -79,20 +84,12 @@ public class ApiClient {
             return result;
 
         } catch (Exception e) {
-            logger.error("❌ 请求失败: {}", e.getMessage(), e);
-            throw new RuntimeException("接口请求失败: " + e.getMessage(), e);
+            throw new RuntimeException("❌ 请求失败: " + e.getMessage(), e);
         }
     }
 
-    private static Map<String, String> flattenHeaders(Map<String, List<String>> rawHeaders) {
-        return rawHeaders.entrySet().stream()
-                .filter(e -> !e.getValue().isEmpty())
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> String.join(";", e.getValue())));
-    }
-
     private static boolean isTokenInvalid(ApiResponse response) {
-        String body = response.getBody();
-        return body.contains("token失效") || body.contains("\"code\":401");
+        return response.getBody().contains("token失效") || response.getBody().contains("\"code\":401");
     }
 
     public static Map<String, String> jsonHeader() {
@@ -107,4 +104,16 @@ public class ApiClient {
         if (token != null) headers.put("Authorization", token);
         return headers;
     }
+
+    private static Map<String, String> flattenHeaders(Map<String, List<String>> rawHeaders) {
+        Map<String, String> flatHeaders = new HashMap<>();
+        for (Map.Entry<String, List<String>> entry : rawHeaders.entrySet()) {
+            // 如果某个 header 有多个值，使用 ; 分隔
+            String headerValue = String.join(";", entry.getValue());
+            flatHeaders.put(entry.getKey(), headerValue);
+        }
+        return flatHeaders;
+    }
 }
+
+

@@ -34,17 +34,13 @@ public abstract class BaseApiTest extends BaseTest {
      * 测试执行主流程：请求 → 断言 → 提取 → 写入 → 通知
      */
     protected void executeAndValidate(Map<String, String> data) {
-//        skipIfFlagged(data);
-
         String response = "";
         int rowIndex = Integer.parseInt(data.getOrDefault("rowIndex", "-1"));
 
         try {
             // 自动推导测试来源（通过反射获取注解）
             if (filePath == null || sheetName == null) {
-                ExcelSource source = getClass()
-                        .getMethod(Thread.currentThread().getStackTrace()[2].getMethodName(), Map.class)
-                        .getAnnotation(ExcelSource.class);
+                ExcelSource source = getClass().getMethod(Thread.currentThread().getStackTrace()[2].getMethodName(), Map.class).getAnnotation(ExcelSource.class);
                 if (source != null) {
                     this.filePath = source.file();
                     this.sheetName = source.sheet();
@@ -64,10 +60,7 @@ public abstract class BaseApiTest extends BaseTest {
             String resolvedPath = ParamResolver.resolveWithStore(rawUrl);
 
             // 🧠 如果 rawUrl 是以 "/" 开头的路径，则拼接 baseUrl
-            String fullUrl = resolvedPath.startsWith("http")
-                    ? resolvedPath
-                    : baseUrl + resolvedPath;
-
+            String fullUrl = resolvedPath.startsWith("http") ? resolvedPath : baseUrl + resolvedPath;
 
             String body = ParamResolver.resolveWithStore(rawBody);
 
@@ -95,15 +88,18 @@ public abstract class BaseApiTest extends BaseTest {
             // 验证响应
             ResponseValidator.validateStatusCode(200, expectedStatus);
 
-            if (checkField != null && expectedValue != null) {
+            // 校验字段，如果字段和期望值不为空才执行
+            if (checkField != null && !checkField.trim().isEmpty() && expectedValue != null && !expectedValue.trim().isEmpty()) {
                 ResponseValidator.validateJsonField(response, checkField, expectedValue);
             }
 
-            if (checkFields != null && expectedValues != null) {
+            // 多字段校验，如果字段和期望值不为空才执行
+            if (checkFields != null && !checkFields.trim().isEmpty() && expectedValues != null && !expectedValues.trim().isEmpty()) {
                 ResponseValidator.validateMultipleJsonFields(response, checkFields, expectedValues);
             }
 
-            if (extractField != null && storeAs != null) {
+            // 提取字段并存储，如果字段和存储名称不为空才执行
+            if (extractField != null && !extractField.trim().isEmpty() && storeAs != null && !storeAs.trim().isEmpty()) {
                 ResponseValidator.extractJsonField(response, extractField, storeAs);
                 test.info("📥 字段提取并缓存: ${" + storeAs + "}");
             }
@@ -116,6 +112,7 @@ public abstract class BaseApiTest extends BaseTest {
             markFail(response, rowIndex, e.toString(), e);
         }
     }
+
 
     /**
      * 测试通过写入日志与 Excel
